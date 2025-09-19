@@ -9,6 +9,13 @@ namespace Geom = Geometry;
 
 int main()
 {
+    Geom::Vec2f x{ 1, 2 };
+    Geom::Vec2f y{ 2, 1 };
+    auto result1 = x + y;
+    std::cout << result1.x() << " " << result1.y();
+    auto result2 = x + 10;
+    std::cout << result2.x() << " " << result2.y();
+
     auto glfw_handle = glfw::Init();
     glfw::WindowHints hints{
         .Profile = glfw::OpenGlProfile::Core,

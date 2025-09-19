@@ -9,8 +9,8 @@ namespace Geom = Geometry;
 
 int main()
 {
-    Geom::Vec2f x{ 1, 2 };
-    Geom::Vec2f y{ 2, 1 };
+    Geom::Vec x{ 1.0f, 2.0f };
+    Geom::Vec y{ 2.0f, 1.0f };
     auto result1 = x + y;
     std::cout << result1.x() << " " << result1.y();
     auto result2 = x + 10;

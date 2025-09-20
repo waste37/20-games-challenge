@@ -4,8 +4,9 @@
 #include <concepts>
 #include <type_traits>
 
-namespace Geometry
+namespace geom
 {
+
 namespace detail
 {
 template <typename T, size_t N>
@@ -95,6 +96,8 @@ public:
     using Base = detail::VecImpl<T, 2>;
     using Base::Size;
     using Base::ComponentType;
+    using Base::Reference;
+
     constexpr Vec(T x, T y) : Base::VecImpl{ {x, y} } {}
 
     constexpr Vec() : Vec{ T{0} } {}
@@ -127,6 +130,7 @@ class Vec<T, 3> : public detail::VecImpl<T, 3> {
     using Base = detail::VecImpl<T, 3>;
     using Base::Size;
     using Base::ComponentType;
+    using Base::Reference;
 
     constexpr Vec(T x, T y, T z) : Base::VecImpl{ {x, y, z} } {}
 
@@ -164,6 +168,7 @@ public:
     using Base = detail::VecImpl<T, 4>;
     using Base::Size;
     using Base::ComponentType;
+    using Base::Reference;
 
     constexpr Vec(T x, T y, T z, T w) : Base::VecImpl{ {x, y, z, w} } {}
 
@@ -235,13 +240,18 @@ struct Color : public Vec<float, 4> {
 
 template <typename T>
 concept Arithmetic = std::is_arithmetic_v<T>;
+template <typename T>
+concept AllowsSubscripting = requires(T x, std::size_t i) { x[i]; };
+
+template <typename T>
+concept ScalarLike = !AllowsSubscripting<T> && Arithmetic<T>;
 
 template <typename V>
 concept VectorLike = requires(V v, std::size_t i)
 {
     typename V::ComponentType;
     { V::Size } -> std::convertible_to<std::size_t>;
-    { v[i] } -> std::same_as<decltype(v[i])>;
+    { v[i] } -> std::convertible_to<typename V::ComponentType>;
 };
 
 template <typename V1, typename V2>
@@ -256,20 +266,20 @@ constexpr auto MapImpl(F &&f, const VecT &x, std::index_sequence<Is...>)
 }
 
 template <typename F, VectorLike VecT, VectorLike VecU, size_t ...Is>
-constexpr auto MapImpl(F &&f, const VecT &x, const VecU &y, std::index_sequence<Is...>)  requires VectorLikeSameSize<VecT, VecU>
+constexpr auto MapImpl(F &&f, const VecT &x, const VecU &y, std::index_sequence<Is...>) noexcept requires VectorLikeSameSize<VecT, VecU>
 {
-    using ReturnType = decltype(typename VecT::ComponentType{} + typename VecU::ComponentType{});
-    return Vec<ReturnType, VecT::Size>{ f(x[Is], y[Is])... };
+    using ReturnType = std::common_type_t<typename VecT::ComponentType, typename VecU::ComponentType>;
+    return Vec<ReturnType, VecT::Size>(f(x[Is], y[Is])...);
 }
 
 template <typename F, VectorLike VecT>
-auto Map(F &&f, const VecT &x)
+auto Map(F &&f, const VecT &x) noexcept
 {
     return MapImpl(std::forward<F>(f), x, std::make_index_sequence<VecT::Size>{});
 }
 
 template <typename F, VectorLike VecT, VectorLike VecU>
-auto Map(F &&f, const VecT &x, const VecU &y) requires VectorLikeSameSize<VecT, VecU>
+auto Map(F &&f, const VecT &x, const VecU &y) noexcept requires VectorLikeSameSize<VecT, VecU>
 {
     return MapImpl(std::forward<F>(f), x, y, std::make_index_sequence<VecT::Size>{});
 }
@@ -297,13 +307,13 @@ template <VectorLike VecT>
 // operator +
 
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator+(const VecT &x, Arithmetic auto y) noexcept
+[[nodiscard]] constexpr auto operator+(const VecT &x, ScalarLike auto y) noexcept
 {
     return detail::Map([y](VecT::ComponentType x_i) { return x_i + y; }, x);
 }
 
 template <VectorLike VecU>
-[[nodiscard]] constexpr auto operator+(Arithmetic auto x, const VecU &y) noexcept
+[[nodiscard]] constexpr auto operator+(ScalarLike auto x, const VecU &y) noexcept
 {
     return detail::Map([x](VecU::ComponentType y_i) { return x + y_i; }, y);
 }
@@ -318,13 +328,13 @@ template <VectorLike VecT, VectorLike VecU>
 // operator -
 
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator-(const VecT &x, Arithmetic auto y) noexcept
+[[nodiscard]] constexpr auto operator-(const VecT &x, ScalarLike auto y) noexcept
 {
     return detail::Map([y](VecT::ComponentType x_i) { return x_i - y; }, x);
 }
 
 template <VectorLike VecU>
-[[nodiscard]] constexpr auto operator-(Arithmetic auto x, const VecU &y) noexcept
+[[nodiscard]] constexpr auto operator-(ScalarLike auto x, const VecU &y) noexcept
 {
     return detail::Map([x](VecU::ComponentType y_i) { return x - y_i; }, y);
 }
@@ -338,13 +348,13 @@ template <VectorLike VecT, VectorLike VecU>
 // operator *
 
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator*(const VecT &x, Arithmetic auto y) noexcept
+[[nodiscard]] constexpr auto operator*(const VecT &x, ScalarLike auto y) noexcept
 {
     return detail::Map([y](VecT::ComponentType x_i) { return x_i * y; }, x);
 }
 
 template <VectorLike VecU>
-[[nodiscard]] constexpr auto operator*(Arithmetic auto x, const VecU &y) noexcept
+[[nodiscard]] constexpr auto operator*(ScalarLike auto x, const VecU &y) noexcept
 {
     return detail::Map([x](VecU::ComponentType y_i) { return x * y_i; }, y);
 }
@@ -358,13 +368,13 @@ template <VectorLike VecT, VectorLike VecU>
 // operator /
 
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator/(const VecT &x, Arithmetic auto y) noexcept
+[[nodiscard]] constexpr auto operator/(const VecT &x, ScalarLike auto y) noexcept
 {
     return detail::Map([y](VecT::ComponentType x_i) { return x_i / y; }, x);
 }
 
 template <VectorLike VecU>
-[[nodiscard]] constexpr auto operator/(Arithmetic auto x, const VecU &y) noexcept
+[[nodiscard]] constexpr auto operator/(ScalarLike auto x, const VecU &y) noexcept
 {
     return detail::Map([x](VecU::ComponentType y_i) { return x / y_i; }, y);
 }

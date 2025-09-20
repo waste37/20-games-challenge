@@ -1,4 +1,6 @@
 #pragma once
+
+
 #include <algorithm>
 #include <array>
 #include <concepts>
@@ -10,7 +12,7 @@ namespace geom
 namespace detail
 {
 template <typename T, size_t N>
-class VecImpl {
+class VecStorage {
 public:
     using ComponentType = T;
     using Pointer = ComponentType *;
@@ -27,37 +29,37 @@ public:
 
     [[nodiscard]] constexpr Reference operator[](size_t index) noexcept
     {
-        return storage[index];
+        return m_Storage[index];
     }
 
     [[nodiscard]] constexpr ConstReference operator[](size_t index) const noexcept
     {
-        return storage[index];
+        return m_Storage[index];
     }
 
     [[nodiscard]] constexpr Reference At(size_t index)
     {
         if (index >= Size) throw std::out_of_range("Vec::At");
-        return storage[index];
+        return m_Storage[index];
     }
 
     [[nodiscard]] constexpr ConstReference At(size_t index) const
     {
         if (index >= Size) throw std::out_of_range("Vec::At");
-        return storage[index];
+        return m_Storage[index];
     }
 
     [[nodiscard]] Pointer Ptr() noexcept
     {
-        return storage.data();
+        return m_Storage.data();
     }
 
     [[nodiscard]] ConstPointer Ptr() const noexcept
     {
-        return storage.data();
+        return m_Storage.data();
     }
 
-    void Swap(VecImpl &other) noexcept(std::is_nothrow_swappable_v<T>)
+    void swap(VecStorage &other) noexcept(std::is_nothrow_swappable_v<T>)
     {
         for (std::size_t i = 0; i < Size; ++i) {
             using std::swap;
@@ -79,7 +81,7 @@ public:
     [[nodiscard]] ConstReverseIterator crbegin() const noexcept { return rbegin(); }
     [[nodiscard]] ConstReverseIterator crend() const noexcept { return rend(); }
 
-    std::array<T, N> storage;
+    std::array<T, N> m_Storage;
 };
 } // detail
 
@@ -88,17 +90,22 @@ constexpr T &AccessorName() { return (*this)[index]; }              \
 constexpr const T &AccessorName() const { return (*this)[index]; }  \
 
 
-template <typename T, size_t N> class Vec : public detail::VecImpl<T, N> {};
+template <typename T, size_t N> class Vec : public detail::VecStorage<T, N> {
+    using Base = detail::VecStorage<T, N>;
+    using Base::Size;
+    using Base::ComponentType;
+    using Base::Reference;
+};
 
 template <typename T>
-class Vec<T, 2> : public detail::VecImpl<T, 2> {
+class Vec<T, 2> : public detail::VecStorage<T, 2> {
 public:
-    using Base = detail::VecImpl<T, 2>;
+    using Base = detail::VecStorage<T, 2>;
     using Base::Size;
     using Base::ComponentType;
     using Base::Reference;
 
-    constexpr Vec(T x, T y) : Base::VecImpl{ {x, y} } {}
+    constexpr Vec(T x, T y) : Base::VecStorage{ {x, y} } {}
 
     constexpr Vec() : Vec{ T{0} } {}
     constexpr explicit Vec(T v) : Vec{ v, v } {}
@@ -126,13 +133,13 @@ public:
 
 
 template <typename T>
-class Vec<T, 3> : public detail::VecImpl<T, 3> {
-    using Base = detail::VecImpl<T, 3>;
+class Vec<T, 3> : public detail::VecStorage<T, 3> {
+    using Base = detail::VecStorage<T, 3>;
     using Base::Size;
     using Base::ComponentType;
     using Base::Reference;
 
-    constexpr Vec(T x, T y, T z) : Base::VecImpl{ {x, y, z} } {}
+    constexpr Vec(T x, T y, T z) : Base::VecStorage{ {x, y, z} } {}
 
     constexpr Vec() : Vec{ T{0} } {}
     constexpr explicit Vec(T v) : Vec{ v, v, v } {}
@@ -163,14 +170,14 @@ class Vec<T, 3> : public detail::VecImpl<T, 3> {
 };
 
 template <typename T>
-class Vec<T, 4> : public detail::VecImpl<T, 4> {
+class Vec<T, 4> : public detail::VecStorage<T, 4> {
 public:
-    using Base = detail::VecImpl<T, 4>;
+    using Base = detail::VecStorage<T, 4>;
     using Base::Size;
     using Base::ComponentType;
     using Base::Reference;
 
-    constexpr Vec(T x, T y, T z, T w) : Base::VecImpl{ {x, y, z, w} } {}
+    constexpr Vec(T x, T y, T z, T w) : Base::VecStorage{ {x, y, z, w} } {}
 
     constexpr Vec() : Vec{ T{0} } {}
     constexpr explicit Vec(T v) : Vec{ v, v, v, v } {}
@@ -207,6 +214,10 @@ public:
 };
 
 #undef LINEAR_ALGEBRA__DEFINE_VECTOR_ACCESSOR
+
+template <typename T> using Vec2 = Vec<T, 2>;
+template <typename T> using Vec3 = Vec<T, 2>;
+template <typename T> using Vec4 = Vec<T, 2>;
 
 template <typename T> Vec(T, T) -> Vec<T, 2>;
 template <typename T> Vec(T, T, T) -> Vec<T, 3>;

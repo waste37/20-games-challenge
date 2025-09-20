@@ -1,13 +1,14 @@
 #pragma once
 
-
 #include <array>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-
 #include <string_view>
+
 #include <glad/glad.h>
+
+#include "../geom/Geometry.h"
 
 namespace gfx
 {
@@ -98,9 +99,19 @@ public:
         {
         }
 
-        bool operator=(bool value) noexcept { glUniform1i(Location(), (int)value); }
-        float operator=(float value) noexcept { glUniform1f(Location(), value); }
-        int operator=(int value) noexcept { glUniform1i(Location(), value); }
+        void operator=(bool value) noexcept { glUniform1i(Location(), (int)value); }
+        void operator=(float value) noexcept { glUniform1f(Location(), value); }
+        void operator=(int value) noexcept { glUniform1i(Location(), value); }
+
+        void operator=(geom::Mat<float, 4, 4> &&value) noexcept
+        {
+            glUniformMatrix4fv(Location(), 1, GL_FALSE, value.Ptr());
+        }
+
+        void operator=(const geom::Mat<float, 4, 4> &value) noexcept
+        {
+            glUniformMatrix4fv(Location(), 1, GL_FALSE, value.Ptr());
+        }
     private:
         constexpr int Location() const noexcept
         {

@@ -67,43 +67,15 @@ int main()
     glfw::MakeContextCurrent(window);
     glad::InitGLLoader((glad::LoadProc)glfw::GetProcAddress);
 
-
     gfx::Renderer renderer{ window };
-    // renderer Init(max_data)
-    constexpr size_t MAX_DATA = 100ull * 12ull * sizeof(float);
-    gfx::GpuHandle gpu_uploader{ MAX_DATA };
-    gpu_uploader.Allocate();
-
     gfx::ShaderProgram program{ vertex_shader, fragment_shader };
     program.Build();
-    auto [width, height] = window.Size();
-    auto projection = geom::OrtographicProjection(0.0f, (float)width, 0.0f, (float)height, -0.1f, 100.0f);
-    program.Use();
-    program["projection"] = projection;
 
-    gfx::RenderCommandQueue commands;
-
+    renderer.SetColor(0x000000ff);
     while (!window.ShouldClose()) {
-        // Renderer::Clear();
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-
-        // Renderer::AddSprite(sprite, color);
-
-        auto data = SpriteData(sprite);
-        program["color"] = sprite.color;    // this is per bucket
-
-
-
-        gpu_uploader.UploadSpritesData(data);
-        gpu_uploader.UploadCommandData(commands);
-
-        // Command Executor ? prende va?
-        va.Bind();
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        va.Unbind();
-
+        renderer.Clear();
+        renderer.DrawSprite(Bbox{100, 100, 150, 150}, 0xffff00ff);
+        renderer.Flush();
         window.SwapBuffers();
         glfw::PollEvents();
     }

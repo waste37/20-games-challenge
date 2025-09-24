@@ -188,6 +188,27 @@ public:
         return glfwWindowShouldClose(m_Handle);
     }
 
+    std::pair<int, int> Size() const
+    {
+        int width, height;
+        glfwGetWindowSize(m_Handle, &width, &height);
+        return std::make_pair(width, height);
+    }
+
+    int Width() const
+    {
+        int width, height;
+        glfwGetWindowSize(m_Handle, &width, &height);
+        return width;
+    }
+
+    int Height() const
+    {
+        int width, height;
+        glfwGetWindowSize(m_Handle, &width, &height);
+        return width;
+    }
+
     void SwapBuffers()
     {
         glfwSwapBuffers(m_Handle);

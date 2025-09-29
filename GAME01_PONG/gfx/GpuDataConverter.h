@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <iostream>
 #include <algorithm>
 #include <vector>
 #include "SpriteStorage.h"
@@ -9,16 +10,17 @@
 namespace gfx
 {
 
-template <typename MaxSprites>
+template <size_t MaxSprites>
 class GpuDataConverter {
 public:
-    constexpr static size_t VerticesCount = MaxSprites * SpriteStorage::FloatsPerSprite();
-    GpuDataConverter(SpriteStorage &sprites)
+    constexpr static size_t VertexCount = MaxSprites * SpriteStorage<MaxSprites>::FloatsPerSprite();
+    GpuDataConverter(SpriteStorage<MaxSprites>& sprites)
     {
+        if (sprites.Size() == 0) return;
         Convert(sprites);
     }
 
-    std::vector<float> RenderData() noexcept { return m_RenderData; }
+    std::array<float, VertexCount> VertexData() noexcept { return m_RenderData; }
     RenderCommandQueue DrawingData() noexcept { return m_DrawingData; }
 
 private:
@@ -27,64 +29,105 @@ private:
         size_t Length;
     };
 
-    void Convert(SpriteStorage &sprites) noexcept
+    void Convert(SpriteStorage<MaxSprites>& sprites) noexcept
     {
         auto buckets = GroupData(sprites);
         ProcessBuckets(buckets, sprites);
     }
 
-    std::vector<DataBucket> GroupData(SpriteStorage &sprites)
+    std::vector<DataBucket> GroupData(SpriteStorage<MaxSprites>& sprites)
     {
-        std::vector<DataBucket> buckets{};
-        std::sort(sprites.begin(), sprites.end());
+        sprites.Sort();
 
+        std::vector<DataBucket> buckets{};
         size_t bucket_beginning = 0;
         size_t bucket_length = 0;
 
-        while (bucket_beginning + bucket_length < sprites.Size()) {
-            if (SpriteStorage::InSameBucket(sprites[bucket_beginning], sprites[bucket_beginning + bucket_length + 1])) {
+        while (bucket_beginning + bucket_length < sprites.Size() - 1) {
+            if (sprites.InSameBucket(bucket_beginning, bucket_beginning + bucket_length + 1)) {
                 bucket_length++;
+                //std::cout << "in same bucket\n";
             } else {
-                buckets.push_back({ bucket_beginning, bucket_length });
-                bucket_beginning = bucket_length;
+                buckets.push_back({ bucket_beginning, bucket_length + 1 });
+                bucket_beginning = bucket_beginning + bucket_length + 1;
                 bucket_length = 0;
             }
         }
 
+        buckets.push_back({ bucket_beginning, bucket_length + 1 });
+
         return buckets;
     }
 
-    void ProcessBuckets(std::vector<DataBucket> &&buckets, SpriteStorage &sprites)
+    void ProcessBuckets(const std::vector<DataBucket>& buckets, SpriteStorage<MaxSprites>& sprites)
     {
-        size_t render_data_offset = 0;
-        for (auto bucket : buckets) {
-            std::vector<int> firsts;
-            std::vector<GLsizei> counts{ bucket.Length, SpriteStorage::FloatsPerSprite() };
-            std::vector<GLenum> modes;
-
-            for (size_t i = bucket.Start; i < bucket.Length; ++i) {
-                modes.append(sprites.Modes[i])
-                    firsts.append(render_data_offset);
-                render_data_offset = PushInterleavedData(render_data_offset, sprites.BBoxes[i]);
+        //for (const auto& bucket : buckets) {
+        //    std::cout << "bucket" << bucket.Start << ", " << bucket.Length << std::endl;
+        //}
+        int render_data_offset = 0;
+        for (const auto& bucket : buckets) {
+            auto type = sprites.Type(bucket.Start);
+            GLenum mode;
+            if (type == SpriteType::TexturedRect) {
+                mode = GL_TRIANGLE_STRIP;
             }
 
-            auto color = sprites.Colors[bucket.Start];
-            auto draw_count = buckets.size();
-            auto shader_id = -1;
-            m_DrawingData.AddCommand(shader_id, projection, color, modes, firsts, counts, draw_count);
+            auto texture = sprites.Texture(bucket.Start);
+            auto draw_count = static_cast<GLsizei>(bucket.Length);
+
+            std::vector<int> firsts;
+            std::vector<GLsizei> counts(bucket.Length, (GLsizei)SpriteStorage<MaxSprites>::VerticesPerSprite());
+            for (size_t i = bucket.Start; i < bucket.Start + bucket.Length; ++i) {
+                firsts.push_back(static_cast<int>(i) * static_cast<int>(SpriteStorage<MaxSprites>::VerticesPerSprite()));
+                //std::cout << "command" << i << "first " << firsts.back() << std::endl;
+                if (sprites.Type(i) == gfx::SpriteType::TexturedRect) {
+                    render_data_offset = PushInterleavedTexturedRect(render_data_offset, sprites.Bbox(i), sprites.Depth(i));
+                }
+            }
+            m_DrawingData.Push(RenderCommand{ texture, mode, firsts, counts, draw_count });
         }
+
+        //for (int i = 0; i < render_data_offset; ++i) {
+        //    std::cout << m_RenderData[i] << " ";
+        //    if (i % 3 == 2) std::cout << std::endl;
+        //}
+        //exit(0);
     }
 
-    constexpr size_t PushInterleavedRectData(size_t current_offset, geom::Bbox bbox)
+    constexpr int PushInterleavedTexturedRect(int current_offset, math::Bbox bbox, float depth)
     {
-        m_RenderData[current_offset++] = bbox.Pos.x();                 m_RenderData[current_offset++] = bbox.Pos.y();                  // top-left
-        m_RenderData[current_offset++] = bbox.Pos.x();                 m_RenderData[current_offset++] = bbox.Pos.y() + bbox.Size.y();  // bottom-left
-        m_RenderData[current_offset++] = bbox.Pos.x() + bbox.Size.x(); m_RenderData[current_offset++] = bbox.Pos.y();                  // top-right
-        m_RenderData[current_offset++] = bbox.Pos.x() + bbox.Size.x(); m_RenderData[current_offset++] = bbox.Pos.y() + bbox.Size.y();  // bottom-right
+        // top-left
+        m_RenderData[current_offset++] = bbox.Pos.x();
+        m_RenderData[current_offset++] = bbox.Pos.y();
+        m_RenderData[current_offset++] = depth;
+        m_RenderData[current_offset++] = 0.0f;
+        m_RenderData[current_offset++] = 0.0f;
+
+        // bottom-left
+        m_RenderData[current_offset++] = bbox.Pos.x();
+        m_RenderData[current_offset++] = bbox.Pos.y() + bbox.Size.y();
+        m_RenderData[current_offset++] = depth;
+        m_RenderData[current_offset++] = 0.0f;
+        m_RenderData[current_offset++] = 1.0f;
+
+        // top-right
+        m_RenderData[current_offset++] = bbox.Pos.x() + bbox.Size.x();
+        m_RenderData[current_offset++] = bbox.Pos.y();
+        m_RenderData[current_offset++] = depth;
+        m_RenderData[current_offset++] = 1.0f;
+        m_RenderData[current_offset++] = 0.0f;
+
+        // bottom-right
+        m_RenderData[current_offset++] = bbox.Pos.x() + bbox.Size.x();
+        m_RenderData[current_offset++] = bbox.Pos.y() + bbox.Size.y();
+        m_RenderData[current_offset++] = depth;
+        m_RenderData[current_offset++] = 1.0f;
+        m_RenderData[current_offset++] = 1.0f;
+
         return current_offset;
     }
 
-    std::array<float, VerticesCount> m_RenderData;
+    std::array<float, VertexCount> m_RenderData;
     RenderCommandQueue m_DrawingData;
 };
 

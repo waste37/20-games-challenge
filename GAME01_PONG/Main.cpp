@@ -1,82 +1,37 @@
 #include <iostream>
 #include <memory>
 #include <cstdlib>
+#include <chrono>
+#include <cassert>
+#include <unordered_map>
+#include <thread>
+#include "Game.h"
 
-#include "Platform.h"
-#include "geom/Geometry.h"
-#include "gfx/GpuHandle.h"
-#include "gfx/Shader.h"
-#include "gfx/Renderer.h"
-
-
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-static const char *vertex_shader =
-"#version 330 core\n"
-"layout (location = 0) in vec2 pos;\n"
-"uniform mat4 projection;"
-"void main() {\n"
-"   gl_Position = projection * vec4(pos, -1.0, 1.0);\n"
-"}\n";
-
-static const char *fragment_shader =
-"#version 330 core\n"
-"uniform vec4 color;\n"
-"void main() {\n"
-"   gl_FragColor = color;\n"
-"}\n";
-
-struct Sprite {
-    geom::Vec2<float> pos;
-    geom::Vec2<float> size;
-    geom::Color color;
-};
-
-
-
-//void ReadFile()
-//{
-//    auto size = std::filesystem::file_size(path);
-//    const char vertex_shader_source = std::string(size, '\0');
-//    std::ifstream in(m_VertexShaderPath);
-//    in.read(&m_VertexShaderPath[0], size);
-//}
-
-struct Sprites {
-
-    geom::Vec2<float> Positions[100];
-    geom::Vec2<float> Sizes[100];
-    geom::Color Colors[10];
-
-};
+static Game game{};
 
 int main()
 {
+    std::ios::sync_with_stdio(false);
+    auto platform = std::make_shared<Platform>((int)game.WindowWidth, (int)game.WindowHeight, "PONG");
+    game.Load(platform->Loader);
+    platform->Renderer.SetColor(0);
+    auto start = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();
+    auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-    auto glfw_handle = glfw::Init();
+    while (!platform->Window.ShouldClose() && game.State != GameState::Quit) {
+        start = std::chrono::high_resolution_clock::now();
 
-    glfw::WindowHints hints{
-        .Profile = glfw::OpenGlProfile::Core,
-        .ContextVersionMajor = 3,
-        .ContextVersionMinor = 3,
-    };
-    hints.Apply();
+        game.HandleInput(platform->Window);
+        game.Update();
+        platform->BeginDrawing();
+        game.Draw(platform->Renderer);
+        platform->EndDrawing();
+        end = std::chrono::high_resolution_clock::now();
 
-    glfw::Window window{ 800, 600, "PONG" };
-    glfw::MakeContextCurrent(window);
-    glad::InitGLLoader((glad::LoadProc)glfw::GetProcAddress);
-
-    gfx::Renderer renderer{ window };
-    gfx::ShaderProgram program{ vertex_shader, fragment_shader };
-    program.Build();
-
-    renderer.SetColor(0x000000ff);
-    while (!window.ShouldClose()) {
-        renderer.Clear();
-        renderer.DrawSprite(Bbox{100, 100, 150, 150}, 0xffff00ff);
-        renderer.Flush();
-        window.SwapBuffers();
-        glfw::PollEvents();
+        dt = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        if (dt < 16666) {
+            std::this_thread::sleep_for(std::chrono::microseconds(16666 - dt));
+        }
     }
 }

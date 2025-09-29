@@ -5,7 +5,7 @@
 
 #include "Concepts.h"
 
-namespace geom
+namespace math
 {
 
 
@@ -15,10 +15,10 @@ template <ScalarLike T, size_t R, size_t C>
 class MatStorage {
 public:
     using ComponentType = T;
-    using Pointer = ComponentType *;
-    using ConstPointer = const ComponentType *;
-    using Reference = ComponentType &;
-    using ConstReference = const ComponentType &;
+    using Pointer = ComponentType*;
+    using ConstPointer = const ComponentType*;
+    using Reference = ComponentType&;
+    using ConstReference = const ComponentType&;
 
     using Iterator = Pointer;
     using ConstIterator = ConstPointer;
@@ -60,7 +60,7 @@ public:
         return m_Storage.data();
     }
 
-    std::array<T, R *C> m_Storage;
+    std::array<T, R* C> m_Storage;
 };
 
 } // detail
@@ -97,13 +97,21 @@ public:
     {
     }
 
+    Mat() : Mat{
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+    }
+    {
+    }
 };
 
 
 /* Default Constructors *******************/
 
 template <ScalarLike T>
-constexpr auto OrtographicProjection(T left, T right, T top, T bottom, T near, T far) noexcept
+constexpr auto OrthographicProjection(T left, T right, T top, T bottom, T near, T far) noexcept
 {
     return Mat<T, 4, 4>{
         T{ 2 } / (right - left), T{ 0 }, T{ 0 }, -(right + left) / (right - left),
@@ -112,4 +120,5 @@ constexpr auto OrtographicProjection(T left, T right, T top, T bottom, T near, T
             T{ 0 }, T{ 0 }, T{ 0 }, T{ 1 }
     };
 }
-}
+
+} // math

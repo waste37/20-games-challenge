@@ -1,7 +1,10 @@
 #pragma once
 
+#include <memory>
+
 #include "../Platform.h"
-#include "../geom/Geometry.h"
+#include "Texture.h"
+#include "../math/math.h"
 #include "GpuHandle.h"
 #include "GpuDataConverter.h"
 #include "SpriteStorage.h"
@@ -20,31 +23,93 @@ namespace gfx
  * The SoA that represents the sequence of things to draw can be easily managed?
  * */
 
-namespace detail
-{
-size_t ComputeGpuMemoryPerSprite(size_t max_sprites)
-{
-    return max_sprites;
-}
+static const char* vertex_shader =
+"#version 330 core\n"
+"layout (location = 0) in vec3 pos;\n"
+"layout (location = 1) in vec2 uv;\n"
+"uniform mat4 projection;\n"
+"out vec2 out_uv;\n"
+"void main() {\n"
+"   gl_Position = projection * vec4(pos, 1.0);\n"
+"   out_uv = uv;\n"
+"}\n";
 
-}
+static const char* fragment_shader =
+"#version 330 core\n"
+"uniform sampler2D tex;\n"
+"in vec2 out_uv;\n"
+"out vec4 FragColor;\n"
+"void main() {\n"
+"   FragColor = texture(tex, out_uv);\n"
+"}\n";
 
-template <size_t MaxSprites = 256>
+template <ptrdiff_t MaxSprites = 256>
 class Renderer {
 public:
-    Renderer(const glfw::Window &window)
+    Renderer(glfw::Window& window)
         : m_Window{ window },
-        m_GpuHandle{ MaxSprites * SpriteStorage::VertexPerSprite() * sizeof(float)) },
-        m_Color{ 0x000000ff }
+        m_GpuHandle{ MaxSprites * SpriteStorage<MaxSprites>::FloatsPerSprite() * sizeof(float) },
+        m_Color{ 0x000000ff },
+        m_Depth{ -static_cast<float>(MaxSprites) }
     {
+        auto [width, height] = window.Size();
+        m_GpuHandle.SetProjectionMatrix(math::OrthographicProjection(
+            0.0f, static_cast<float>(width),
+            0.0f, static_cast<float>(height),
+            0.0f, static_cast<float>(MaxSprites)
+        ));
+        window.SizeEvent.SetHandler([this](glfw::Window& w, int width, int height) {
+            glViewport(0, 0, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
+            m_GpuHandle.SetProjectionMatrix(math::OrthographicProjection(
+                0.0f, static_cast<float>(width),
+                0.0f, static_cast<float>(height),
+                0.0f, static_cast<float>(MaxSprites)
+            ));
+        });
     }
 
-    constexpr void DrawSprite(geom::Bbox bbox, geom::Color color) noexcept
+    void Init()
     {
-        m_Storage.AddSprite(bbox, color);
+        m_GpuHandle.Allocate();
+        m_GpuHandle.CreateShader(vertex_shader, fragment_shader);
     }
 
-    constexpr void SetColor(geom::Color color) noexcept
+    constexpr void DrawSprite(Sprite sprite) noexcept
+    {
+        if (std::isnan(sprite.Depth)) {
+            sprite.Depth = m_Depth += 1.0f;
+        }
+
+        m_Storage.AddSprite(sprite);
+    }
+
+
+    constexpr void DrawSpritesSameDepth(std::vector<Sprite>& sprites) noexcept
+    {
+        if (!sprites.size()) return;
+
+        m_Depth += 1.0f;
+
+        for (auto& sprite : sprites) {
+            sprite.Depth = m_Depth;
+            m_Storage.AddSprite(sprite);
+        }
+    }
+
+
+    constexpr void DrawSprite(math::Bbox bbox, Texture texture) noexcept
+    {
+        auto sprite = Sprite{ .Bbox = bbox, .Texture = texture, .Type = SpriteType::TexturedRect ,.Depth = m_Depth += 1.0f };
+        m_Storage.AddSprite(sprite);
+    }
+
+    constexpr void DrawSprite(math::Bbox bbox, Texture texture, float depth) noexcept
+    {
+        auto sprite = Sprite{ .Bbox = bbox, .Texture = texture, .Type = SpriteType::TexturedRect ,.Depth = depth };
+        m_Storage.AddSprite(sprite);
+    }
+
+    constexpr void SetColor(math::Color color) noexcept
     {
         m_Color = color;
     }
@@ -56,15 +121,21 @@ public:
 
     constexpr void Flush()
     {
-        auto converter = GpuDataConverter<MaxSprites>(m_Storage);
-        m_GpuHandle.UploadSpritesData(converter.SpritesData());
-        m_GpuHandle.UploadCommandData(converter.DrawingData());
+        auto converter = std::make_unique<GpuDataConverter<MaxSprites>>(m_Storage);
+        m_GpuHandle.UploadVertexData(converter->VertexData());
+        m_GpuHandle.UploadCommandData(converter->DrawingData());
+        m_GpuHandle.Free();
+        m_Storage.Clear();
+        m_Depth = -static_cast<float>(MaxSprites);
     }
+
 private:
+    const glfw::Window& m_Window;
     GpuHandle m_GpuHandle;
-    const glfw::Window &m_Window;
-    geom::Color m_Color;
-    SpriteStorage m_Storage;
+    math::Color m_Color;
+    math::Mat<float, 4, 4> m_Projection;
+    SpriteStorage<MaxSprites> m_Storage;
+    float m_Depth;
 };
 
 

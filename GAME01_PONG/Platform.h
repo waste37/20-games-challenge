@@ -1,21 +1,41 @@
 #pragma once
 
 #include <functional>
+#include <stdexcept>
 #include <utility>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+
+namespace glad
+{
+class Error : public std::runtime_error {
+public:
+    explicit Error(const char* message) noexcept
+        : std::runtime_error{ message }
+    {
+    }
+    const char* what() const noexcept
+    {
+        return std::runtime_error::what();
+    }
+};
+
+using LoadProc = GLADloadproc;
+void InitGLLoader(LoadProc load_proc);
+}
 
 namespace glfw
 {
 
 class Error : public std::runtime_error {
 public:
-    explicit Error(const char *message) noexcept
+    explicit Error(const char* message) noexcept
         : std::runtime_error{ message }
     {
     }
-    const char *what() const noexcept
+    const char* what() const noexcept
     {
         return std::runtime_error::what();
     }
@@ -30,25 +50,25 @@ namespace detail
 template <typename T>
 class OwningPtr {
 public:
-    OwningPtr(const OwningPtr &) = delete;
-    OwningPtr &operator=(const OwningPtr &) = delete;
+    OwningPtr(const OwningPtr&) = delete;
+    OwningPtr& operator=(const OwningPtr&) = delete;
 
     constexpr OwningPtr(std::nullptr_t = nullptr) noexcept
         : m_Ptr{}
     {
     }
 
-    constexpr OwningPtr(T *ptr)
+    constexpr OwningPtr(T* ptr)
         : m_Ptr{ ptr }
     {
     }
 
-    constexpr OwningPtr(OwningPtr &&other) noexcept
+    constexpr OwningPtr(OwningPtr&& other) noexcept
         : m_Ptr{ std::exchange(other.m_Ptr, nullptr) }
     {
     }
 
-    constexpr OwningPtr &operator=(OwningPtr &&other) noexcept
+    constexpr OwningPtr& operator=(OwningPtr&& other) noexcept
     {
         m_Ptr = std::exchange(other.m_Ptr, nullptr);
         return *this;
@@ -59,13 +79,13 @@ public:
         return static_cast<bool>(m_Ptr);
     }
 
-    [[nodiscard]] constexpr operator T *() const noexcept
+    [[nodiscard]] constexpr operator T* () const noexcept
     {
         return m_Ptr;
     }
 
 private:
-    T *m_Ptr;
+    T* m_Ptr;
 };
 }
 
@@ -73,7 +93,7 @@ template <typename ...Args>
 class Event {
 public:
     template <typename HandlerType>
-    void SetHandler(HandlerType &&handler)
+    void SetHandler(HandlerType&& handler)
     {
         m_Handler = std::forward<HandlerType>(handler);
     }
@@ -89,6 +109,12 @@ private:
     std::function<void(Args...)> m_Handler;
 };
 
+
+using GlProc = GLFWglproc;
+[[nodiscard]] inline GlProc GetProcAddress(const char* proc_name)
+{
+    return glfwGetProcAddress(proc_name);
+}
 
 enum class ClientApi {
     OpenGl = GLFW_OPENGL_API,
@@ -108,12 +134,13 @@ struct WindowHints {
     int ContextVersionMajor = 1;
     int ContextVersionMinor = 0;
 
-    void Apply() const
+    WindowHints Apply() const
     {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, ContextVersionMajor);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, ContextVersionMinor);
         glfwWindowHint(GLFW_CLIENT_API, static_cast<int>(ClientApi));
         glfwWindowHint(GLFW_OPENGL_PROFILE, static_cast<int>(Profile));
+        return *this;
     }
 };
 
@@ -124,20 +151,20 @@ private:
         using detail::OwningPtr<GLFWwindow>::OwningPtr;
         HandleContainer() noexcept : OwningPtr(nullptr) {}
 
-        HandleContainer(HandleContainer &&other) noexcept
+        HandleContainer(HandleContainer&& other) noexcept
             : detail::OwningPtr<GLFWwindow>{ std::move(other) }
         {
-            if (static_cast<GLFWwindow *>(*this)) {
-                SetPointerFromHandle(static_cast<GLFWwindow *>(*this), reinterpret_cast<Window *>(this));
+            if (static_cast<GLFWwindow*>(*this)) {
+                SetPointerFromHandle(static_cast<GLFWwindow*>(*this), reinterpret_cast<Window*>(this));
             }
         }
 
-        HandleContainer &operator=(HandleContainer &&other) noexcept
+        HandleContainer& operator=(HandleContainer&& other) noexcept
         {
-            glfwDestroyWindow(static_cast<GLFWwindow *>(*this));
-            static_cast<detail::OwningPtr<GLFWwindow> &>(*this) = std::move(other);
-            if (static_cast<GLFWwindow *>(*this)) {
-                SetPointerFromHandle(static_cast<GLFWwindow *>(*this), reinterpret_cast<Window *>(this));
+            glfwDestroyWindow(static_cast<GLFWwindow*>(*this));
+            static_cast<detail::OwningPtr<GLFWwindow>&>(*this) = std::move(other);
+            if (static_cast<GLFWwindow*>(*this)) {
+                SetPointerFromHandle(static_cast<GLFWwindow*>(*this), reinterpret_cast<Window*>(this));
             }
 
             return *this;
@@ -145,7 +172,7 @@ private:
 
         ~HandleContainer()
         {
-            glfwDestroyWindow(static_cast<GLFWwindow *>(*this));
+            glfwDestroyWindow(static_cast<GLFWwindow*>(*this));
         }
     } m_Handle;
 
@@ -156,29 +183,31 @@ public:
         : Window{}
     {
     }
-    explicit Window(GLFWwindow *handle)
+    explicit Window(GLFWwindow* handle)
         : m_Handle(handle)
     {
         if (m_Handle) {
             SetPointerFromHandle(m_Handle, this);
             glfwSetWindowSizeCallback(m_Handle, SizeCallback);
+            glfwMakeContextCurrent(handle);
+            glad::InitGLLoader((glad::LoadProc)glfw::GetProcAddress);
         }
     }
 
-    Window(int width, int height, const char *title)
+    Window(int width, int height, const char* title)
         : Window{ glfwCreateWindow(width, height, title, nullptr, nullptr) }
     {
     }
 
-    Window(const Window &) = delete;
+    Window(const Window&) = delete;
 
-    Window &operator=(const Window &) = delete;
+    Window& operator=(const Window&) = delete;
 
-    Window(Window &&other) noexcept = default;
+    Window(Window&& other) noexcept = default;
 
-    Window &operator=(Window &&other) noexcept = default;
+    Window& operator=(Window&& other) noexcept = default;
 
-    operator GLFWwindow *() const
+    operator GLFWwindow* () const
     {
         return m_Handle;
     }
@@ -193,6 +222,11 @@ public:
         int width, height;
         glfwGetWindowSize(m_Handle, &width, &height);
         return std::make_pair(width, height);
+    }
+
+    int GetKey(int scancode)
+    {
+        return glfwGetKey(m_Handle, scancode);
     }
 
     int Width() const
@@ -214,48 +248,43 @@ public:
         glfwSwapBuffers(m_Handle);
     }
 
-    friend void MakeContextCurrent(const Window &window)
+    friend void MakeContextCurrent(const Window& window)
     {
         glfwMakeContextCurrent(window.m_Handle);
     }
 
-    [[nodiscard]] friend Window &GetCurrentContext()
+    [[nodiscard]] friend Window& GetCurrentContext()
     {
         return GetWrapperFromHandle(glfwGetCurrentContext());
     }
 
-    Event < Window &, int, int> SizeEvent;
+    Event < Window&, int, int> SizeEvent;
 private:
-    static void SizeCallback(GLFWwindow *window, int width, int height)
+    static void SizeCallback(GLFWwindow* window, int width, int height)
     {
-        Window &wrapper = GetWrapperFromHandle(window);
+        Window& wrapper = GetWrapperFromHandle(window);
         wrapper.SizeEvent(wrapper, width, height);
     }
 
-    static Window &GetWrapperFromHandle(GLFWwindow *handle)
+    static Window& GetWrapperFromHandle(GLFWwindow* handle)
     {
-        return *static_cast<Window *>(glfwGetWindowUserPointer(handle));
+        return *static_cast<Window*>(glfwGetWindowUserPointer(handle));
     }
 
-    static void SetPointerFromHandle(GLFWwindow *handle, Window *ptr)
+    static void SetPointerFromHandle(GLFWwindow* handle, Window* ptr)
     {
         glfwSetWindowUserPointer(handle, ptr);
     }
 };
 
-inline void MakeContextCurrent(const Window &window);
-[[nodiscard]] inline Window &GetCurrentContext();
+inline void MakeContextCurrent(const Window& window);
+[[nodiscard]] inline Window& GetCurrentContext();
 
 inline void PollEvents()
 {
     glfwPollEvents();
 }
 
-using GlProc = GLFWglproc;
-[[nodiscard]] inline GlProc GetProcAddress(const char *proc_name)
-{
-    return glfwGetProcAddress(proc_name);
-}
 
 struct Library {
     ~Library()
@@ -274,25 +303,33 @@ struct Library {
 [[nodiscard]] inline Library Init();
 }
 
-namespace glad
+
+#include "gfx/gfx.h"
+#include <iostream>
+#include <cstdlib>
+
+namespace fs
 {
-class Error : public std::runtime_error {
+class AssetLoader {
 public:
-    explicit Error(const char *message) noexcept
-        : std::runtime_error{ message }
-    {
-    }
-    const char *what() const noexcept
-    {
-        return std::runtime_error::what();
-    }
+
+public:
+    AssetLoader() {}
+    gfx::Image LoadImage(const char* path) const noexcept;
+    gfx::Sprite LoadSpriteFromImage(const char* sprite_path) const noexcept;
 };
 
-using LoadProc = GLADloadproc;
-void InitGLLoader(LoadProc load_proc)
-{
-    if (!gladLoadGLLoader(load_proc)) {
-        throw Error("Failed to initialize GLAD");
-    }
 }
-}
+
+class Platform {
+private:
+    glfw::Library m_GLFWHandle;
+    glfw::WindowHints m_WindowHints;
+public:
+    Platform(int width, int height, const char* name);
+    void BeginDrawing();
+    void EndDrawing();
+    glfw::Window Window;
+    gfx::Renderer<256> Renderer;
+    fs::AssetLoader Loader;
+};

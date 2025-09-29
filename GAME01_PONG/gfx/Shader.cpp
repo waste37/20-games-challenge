@@ -6,12 +6,12 @@
 
 #include <glad/glad.h>
 
-#include "../geom/Geometry.h"
+#include "../math/math.h"
 
 namespace gfx
 {
 
-static bool CheckShaderOperationResult(unsigned int id, GLenum what, const char *who)
+static bool CheckShaderOperationResult(unsigned int id, GLenum what, const char* who)
 {
     int success;
     char info_log[512];
@@ -35,7 +35,7 @@ constexpr unsigned int Shader::GetId() const noexcept
 
 bool Shader::Compile() const noexcept
 {
-    const char *source_ptr = m_Source.data();
+    const char* source_ptr = m_Source.data();
     glShaderSource(m_Id, 1, &source_ptr, nullptr);
     glCompileShader(m_Id);
 
@@ -44,8 +44,8 @@ bool Shader::Compile() const noexcept
 
 
 ShaderProgram::ShaderProgram(
-    const char *vertex_shader_source,
-    const char *fragment_shader_source
+    const char* vertex_shader_source,
+    const char* fragment_shader_source
 ) : m_Id{ glCreateProgram() },
 m_VertexShaderSource{ vertex_shader_source },
 m_FragmentShaderSource{ fragment_shader_source }
@@ -80,42 +80,42 @@ void ShaderProgram::ShaderUniform::operator=(bool value) noexcept { glUniform1i(
 void ShaderProgram::ShaderUniform::operator=(float value) noexcept { glUniform1f(Location(), value); }
 void ShaderProgram::ShaderUniform::operator=(int value) noexcept { glUniform1i(Location(), value); }
 
-void ShaderProgram::ShaderUniform::operator=(geom::Mat<float, 4, 4> &&value) noexcept
+void ShaderProgram::ShaderUniform::operator=(math::Mat<float, 4, 4>&& value) noexcept
 {
     glUniformMatrix4fv(Location(), 1, GL_FALSE, value.Ptr());
 }
 
-void ShaderProgram::ShaderUniform::operator=(const geom::Mat<float, 4, 4> &value) noexcept
+void ShaderProgram::ShaderUniform::operator=(const math::Mat<float, 4, 4>& value) noexcept
 {
     glUniformMatrix4fv(Location(), 1, GL_FALSE, value.Ptr());
 }
 
-void ShaderProgram::ShaderUniform::operator=(geom::Vec<float, 4> &&value) noexcept
+void ShaderProgram::ShaderUniform::operator=(math::Vec<float, 4>&& value) noexcept
 {
     glUniform4fv(Location(), 1, value.Ptr());
 }
 
-void ShaderProgram::ShaderUniform::operator=(const geom::Vec<float, 4> &value) noexcept
+void ShaderProgram::ShaderUniform::operator=(const math::Vec<float, 4>& value) noexcept
 {
     glUniform4fv(Location(), 1, value.Ptr());
 }
 
-void ShaderProgram::ShaderUniform::operator=(geom::Vec<float, 3> &&value) noexcept
+void ShaderProgram::ShaderUniform::operator=(math::Vec<float, 3>&& value) noexcept
 {
     glUniform3fv(Location(), 1, value.Ptr());
 }
 
-void ShaderProgram::ShaderUniform::operator=(const geom::Vec<float, 3> &value) noexcept
+void ShaderProgram::ShaderUniform::operator=(const math::Vec<float, 3>& value) noexcept
 {
     glUniform3fv(Location(), 1, value.Ptr());
 }
 
-void ShaderProgram::ShaderUniform::operator=(geom::Vec<float, 2> &&value) noexcept
+void ShaderProgram::ShaderUniform::operator=(math::Vec<float, 2>&& value) noexcept
 {
     glUniform2fv(Location(), 1, value.Ptr());
 }
 
-void ShaderProgram::ShaderUniform::operator=(const geom::Vec<float, 2> &value) noexcept
+void ShaderProgram::ShaderUniform::operator=(const math::Vec<float, 2>& value) noexcept
 {
     glUniform2fv(Location(), 1, value.Ptr());
 }
@@ -131,7 +131,7 @@ ShaderProgram::ConstShaderUniform::ConstShaderUniform(unsigned int program_id, s
 ShaderProgram::ConstShaderUniform::operator bool() const noexcept
 {
     bool value{};
-    glGetUniformiv(m_ProgId, Location(), (int *)&value);
+    glGetUniformiv(m_ProgId, Location(), (int*)&value);
     return value;
 }
 

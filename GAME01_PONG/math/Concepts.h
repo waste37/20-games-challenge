@@ -2,6 +2,10 @@
 
 #include <type_traits>
 
+namespace math
+{
+
+
 template <typename T>
 concept Arithmetic = std::is_arithmetic_v<T>;
 template <typename T>
@@ -20,3 +24,5 @@ concept VectorLike = requires(V v, std::size_t i)
 
 template <typename V1, typename V2>
 concept VectorLikeSameSize = VectorLike<V1> && VectorLike<V2> && (V1::Size == V2::Size);
+
+}

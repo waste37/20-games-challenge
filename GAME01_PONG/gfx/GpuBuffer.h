@@ -42,7 +42,7 @@ public:
     void Allocate(size_t capacity_bytes, Usage usage) const noexcept;
 
     template <typename T>
-    void SetData(T *data, size_t element_count, size_t offset = 0) const noexcept
+    void SetData(T* data, size_t element_count, size_t offset = 0) const noexcept
     {
         glBufferSubData(static_cast<GLenum>(m_Target), offset, element_count * sizeof(T), data);
     }

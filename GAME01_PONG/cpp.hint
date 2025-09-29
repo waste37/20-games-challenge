@@ -1,0 +1,4 @@
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define LINEAR_ALGEBRA__DEFINE_VECTOR_ACCESSOR(AccessorName, index) constexpr T &AccessorName() { return (*this)[index]; } constexpr const T &AccessorName() const { return (*this)[index]; }

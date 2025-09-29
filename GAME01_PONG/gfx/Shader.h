@@ -8,12 +8,12 @@
 
 #include <glad/glad.h>
 
-#include "../geom/Geometry.h"
+#include "../math/math.h"
 
 namespace gfx
 {
 
-using ShaderId = int;
+using ShaderId = unsigned int;
 
 class Shader {
 public:
@@ -28,7 +28,7 @@ public:
     constexpr unsigned int GetId() const noexcept;
     bool Compile() const noexcept;
 private:
-    unsigned int m_Id;
+    ShaderId m_Id;
     std::string_view m_Source;
 };
 
@@ -37,7 +37,7 @@ class ShaderProgram {
 
 public:
     ShaderProgram() = default;
-    ShaderProgram(const char *vertex_shader_source, const char *fragment_shader_source);
+    ShaderProgram(const char* vertex_shader_source, const char* fragment_shader_source);
     constexpr unsigned int Id() const noexcept { return m_Id; }
     bool Build() noexcept;
     void Use() const noexcept;
@@ -47,14 +47,14 @@ public:
         void operator=(bool value) noexcept;
         void operator=(float value) noexcept;
         void operator=(int value) noexcept;
-        void operator=(geom::Mat<float, 4, 4> &&value) noexcept;
-        void operator=(const geom::Mat<float, 4, 4> &value) noexcept;
-        void operator=(geom::Vec<float, 4> &&value) noexcept;
-        void operator=(const geom::Vec<float, 4> &value) noexcept;
-        void operator=(geom::Vec<float, 3> &&value) noexcept;
-        void operator=(const geom::Vec<float, 3> &value) noexcept;
-        void operator=(geom::Vec<float, 2> &&value) noexcept;
-        void operator=(const geom::Vec<float, 2> &value) noexcept;
+        void operator=(math::Mat<float, 4, 4>&& value) noexcept;
+        void operator=(const math::Mat<float, 4, 4>& value) noexcept;
+        void operator=(math::Vec<float, 4>&& value) noexcept;
+        void operator=(const math::Vec<float, 4>& value) noexcept;
+        void operator=(math::Vec<float, 3>&& value) noexcept;
+        void operator=(const math::Vec<float, 3>& value) noexcept;
+        void operator=(math::Vec<float, 2>&& value) noexcept;
+        void operator=(const math::Vec<float, 2>& value) noexcept;
     private:
         constexpr int Location() const noexcept;
         unsigned int m_ProgId;
@@ -79,7 +79,7 @@ public:
     ConstShaderUniform operator[](std::string_view uniform_name) const noexcept;
 
 private:
-    unsigned int m_Id;
+    unsigned int m_Id{};
     std::string_view m_VertexShaderSource;
     std::string_view m_FragmentShaderSource;
     std::string_view m_GeometryShaderSource;

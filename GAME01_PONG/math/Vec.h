@@ -8,7 +8,7 @@
 
 #include "Concepts.h"
 
-namespace geom
+namespace math
 {
 
 namespace detail
@@ -17,10 +17,10 @@ template <ScalarLike T, size_t N>
 class VecStorage {
 public:
     using ComponentType = T;
-    using Pointer = ComponentType *;
-    using ConstPointer = const ComponentType *;
-    using Reference = ComponentType &;
-    using ConstReference = const ComponentType &;
+    using Pointer = ComponentType*;
+    using ConstPointer = const ComponentType*;
+    using Reference = ComponentType&;
+    using ConstReference = const ComponentType&;
 
     using Iterator = Pointer;
     using ConstIterator = ConstPointer;
@@ -61,7 +61,7 @@ public:
         return m_Storage.data();
     }
 
-    void swap(VecStorage &other) noexcept(std::is_nothrow_swappable_v<T>)
+    void swap(VecStorage& other) noexcept(std::is_nothrow_swappable_v<T>)
     {
         for (std::size_t i = 0; i < Size; ++i) {
             using std::swap;
@@ -113,16 +113,16 @@ public:
     constexpr explicit Vec(T v) : Vec{ v, v } {}
 
     template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
-    constexpr Vec(Vec<U, 2> &other) : Vec(other.x(), other.y()) {}
+    constexpr Vec(Vec<U, 2>& other) : Vec(other.x(), other.y()) {}
 
     template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
-    constexpr explicit Vec(Vec<U, 3> &other) : Vec{ other.x(), other.y() } {}
+    constexpr explicit Vec(Vec<U, 3>& other) : Vec{ other.x(), other.y() } {}
 
     template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
-    constexpr explicit Vec(Vec<U, 4> &other) : Vec{ other.x(), other.y() } {}
+    constexpr explicit Vec(Vec<U, 4>& other) : Vec{ other.x(), other.y() } {}
 
     template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
-    constexpr explicit Vec(U *ptr) : Vec{ ptr[0], ptr[1] } {}
+    constexpr explicit Vec(U* ptr) : Vec{ ptr[0], ptr[1] } {}
 
     LINEAR_ALGEBRA__DEFINE_VECTOR_ACCESSOR(x, 0);
     LINEAR_ALGEBRA__DEFINE_VECTOR_ACCESSOR(s, 0);
@@ -146,17 +146,17 @@ class Vec<T, 3> : public detail::VecStorage<T, 3> {
     constexpr Vec() : Vec{ T{0} } {}
     constexpr explicit Vec(T v) : Vec{ v, v, v } {}
 
-    constexpr Vec(T x, Vec<T, 2> &yz) : Vec{ x, yz[0], yz[1] } {}
-    constexpr Vec(Vec<T, 2> &xy, T z) : Vec{ xy[0], xy[1], z } {}
+    constexpr Vec(T x, Vec<T, 2>& yz) : Vec{ x, yz[0], yz[1] } {}
+    constexpr Vec(Vec<T, 2>& xy, T z) : Vec{ xy[0], xy[1], z } {}
 
     template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
-    constexpr Vec(Vec<U, 3> &other) : Vec{ other.x, other.y, other.z } {}
+    constexpr Vec(Vec<U, 3>& other) : Vec{ other.x, other.y, other.z } {}
 
     template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
-    constexpr explicit Vec(Vec<U, 4> &other) : Vec{ other.x, other.y, other.z } {}
+    constexpr explicit Vec(Vec<U, 4>& other) : Vec{ other.x, other.y, other.z } {}
 
     template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
-    constexpr explicit Vec(U *ptr) : Vec{ ptr[0], ptr[1], ptr[2] } {}
+    constexpr explicit Vec(U* ptr) : Vec{ ptr[0], ptr[1], ptr[2] } {}
 
     LINEAR_ALGEBRA__DEFINE_VECTOR_ACCESSOR(x, 0);
     LINEAR_ALGEBRA__DEFINE_VECTOR_ACCESSOR(s, 0);
@@ -184,19 +184,19 @@ public:
     constexpr Vec() : Vec{ T{0} } {}
     constexpr explicit Vec(T v) : Vec{ v, v, v, v } {}
 
-    constexpr Vec(Vec<T, 2> &xy, T z, T w) : Vec{ xy[0], xy[1], z, w } {}
-    constexpr Vec(T x, Vec<T, 2> &yz, T w) : Vec{ x, yz[0], yz[1], w } {}
-    constexpr Vec(T x, T y, Vec<T, 2> &zw) : Vec{ x, y, zw[0], zw[1] } {}
-    constexpr Vec(Vec<T, 2> &xy, Vec<T, 2> zw) : Vec{ xy[0], xy[1], zw[0], zw[1] } {}
+    constexpr Vec(Vec<T, 2>& xy, T z, T w) : Vec{ xy[0], xy[1], z, w } {}
+    constexpr Vec(T x, Vec<T, 2>& yz, T w) : Vec{ x, yz[0], yz[1], w } {}
+    constexpr Vec(T x, T y, Vec<T, 2>& zw) : Vec{ x, y, zw[0], zw[1] } {}
+    constexpr Vec(Vec<T, 2>& xy, Vec<T, 2> zw) : Vec{ xy[0], xy[1], zw[0], zw[1] } {}
 
-    constexpr Vec(Vec<T, 3> &xyz, T w) : Vec{ xyz[0], xyz[1], xyz[2], w } {}
-    constexpr Vec(T x, Vec<T, 3> &yzw) : Vec{ x, yzw[0], yzw[1], yzw[2] } {}
-
-    template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
-    constexpr Vec(Vec<U, 4> &other) : Vec{ other.x, other.y, other.z, other.w } {}
+    constexpr Vec(Vec<T, 3>& xyz, T w) : Vec{ xyz[0], xyz[1], xyz[2], w } {}
+    constexpr Vec(T x, Vec<T, 3>& yzw) : Vec{ x, yzw[0], yzw[1], yzw[2] } {}
 
     template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
-    constexpr explicit Vec(U *ptr) : Vec{ ptr[0], ptr[1], ptr[2], ptr[3] } {}
+    constexpr Vec(Vec<U, 4>& other) : Vec{ other.x, other.y, other.z, other.w } {}
+
+    template <ScalarLike U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
+    constexpr explicit Vec(U* ptr) : Vec{ ptr[0], ptr[1], ptr[2], ptr[3] } {}
 
     LINEAR_ALGEBRA__DEFINE_VECTOR_ACCESSOR(x, 0);
     LINEAR_ALGEBRA__DEFINE_VECTOR_ACCESSOR(s, 0);
@@ -249,49 +249,87 @@ struct Color : public Vec<float, 4> {
         }
     {
     }
-};
 
+    constexpr uint32_t ToUint32() const noexcept
+    {
+        return (static_cast<uint32_t>(r() * 255.0f) << 24)
+            | (static_cast<uint32_t>(g() * 255.0f) << 16)
+            | (static_cast<uint32_t>(b() * 255.0f) << 8)
+            | (static_cast<uint32_t>(a() * 255.0f));
+    }
+
+    friend bool operator==(Color a, Color b)
+    {
+        return a.ToUint32() == b.ToUint32();
+    }
+};
 
 namespace detail
 {
 template <typename F, VectorLike VecT, size_t ...Is>
-constexpr auto MapImpl(F &&f, const VecT &x, std::index_sequence<Is...>)
+[[nodiscard]] constexpr auto MapImpl(F&& f, const VecT& x, std::index_sequence<Is...>)
 {
     return VecT{ f(x[Is])... };
 }
 
 template <typename F, VectorLike VecT, VectorLike VecU, size_t ...Is>
-constexpr auto MapImpl(F &&f, const VecT &x, const VecU &y, std::index_sequence<Is...>) noexcept requires VectorLikeSameSize<VecT, VecU>
+[[nodiscard]] constexpr auto MapImpl(F&& f, const VecT& x, const VecU& y, std::index_sequence<Is...>) noexcept requires VectorLikeSameSize<VecT, VecU>
 {
     using ReturnType = std::common_type_t<typename VecT::ComponentType, typename VecU::ComponentType>;
     return Vec<ReturnType, VecT::Size>(f(x[Is], y[Is])...);
 }
 
 template <typename F, VectorLike VecT>
-auto Map(F &&f, const VecT &x) noexcept
+[[nodiscard]] constexpr auto Map(F&& f, const VecT& x) noexcept
 {
     return MapImpl(std::forward<F>(f), x, std::make_index_sequence<VecT::Size>{});
 }
 
 template <typename F, VectorLike VecT, VectorLike VecU>
-auto Map(F &&f, const VecT &x, const VecU &y) noexcept requires VectorLikeSameSize<VecT, VecU>
+[[nodiscard]] constexpr auto Map(F&& f, const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
 {
     return MapImpl(std::forward<F>(f), x, y, std::make_index_sequence<VecT::Size>{});
 }
+
+template <typename F, VectorLike VecT, std::size_t... Is >
+[[nodiscard]] constexpr bool AndFoldImpl(F&& f, const VecT& x, std::index_sequence<Is...>)
+{
+    return (... && f(x[Is]));
+}
+
+template <typename F, VectorLike VecT, VectorLike VecU, size_t ...Is>
+[[nodiscard]] constexpr bool AndFoldImpl(F&& f, const VecT& x, const VecU& y, std::index_sequence<Is...>) noexcept requires VectorLikeSameSize<VecT, VecU>
+{
+    using ReturnType = std::common_type_t<typename VecT::ComponentType, typename VecU::ComponentType>;
+    return (... && f(x[Is], y[Is]));
+}
+
+template <typename F, VectorLike VecT>
+[[nodiscard]] constexpr bool AndFold(F&& f, const VecT& x)
+{
+    return AndFoldImpl(std::forward<F>(f), x, std::make_index_sequence<VecT::Size>{});
+}
+
+template <typename F, VectorLike VecT, VectorLike VecU>
+[[nodiscard]] constexpr bool AndFold(F&& f, const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
+{
+    return AndFoldImpl(std::forward<F>(f), x, y, std::make_index_sequence<VecT::Size>{});
+}
+
 }
 
 /* Unary Operations **************************************************/
 
 // operator +
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator+(const VecT &x) noexcept
+[[nodiscard]] constexpr auto operator+(const VecT& x) noexcept
 {
     return detail::Map([](VecT::ComponentType x_i) { return +x_i; }, x);
 }
 
 // operator -
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator-(const VecT &x) noexcept
+[[nodiscard]] constexpr auto operator-(const VecT& x) noexcept
 {
     return detail::Map([](VecT::ComponentType x_i) { return -x_i; }, x);
 }
@@ -302,86 +340,115 @@ template <VectorLike VecT>
 // operator +
 
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator+(const VecT &x, ScalarLike auto y) noexcept
+[[nodiscard]] constexpr auto operator+(const VecT& x, ScalarLike auto y) noexcept
 {
     return detail::Map([y](VecT::ComponentType x_i) { return x_i + y; }, x);
 }
 
 template <VectorLike VecU>
-[[nodiscard]] constexpr auto operator+(ScalarLike auto x, const VecU &y) noexcept
+[[nodiscard]] constexpr auto operator+(ScalarLike auto x, const VecU& y) noexcept
 {
     return detail::Map([x](VecU::ComponentType y_i) { return x + y_i; }, y);
 }
 
 template <VectorLike VecT, VectorLike VecU>
-[[nodiscard]] constexpr auto operator+(const VecT &x, const VecU &y) noexcept requires VectorLikeSameSize<VecT, VecU>
+[[nodiscard]] constexpr auto operator+(const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
 {
-    return detail::Map([](VecT::ComponentType x_i, VecT::ComponentType y_i) { return x_i + y_i; }, x, y);
+    return detail::Map([](VecT::ComponentType x_i, VecU::ComponentType y_i) { return x_i + y_i; }, x, y);
 }
 
 
 // operator -
 
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator-(const VecT &x, ScalarLike auto y) noexcept
+[[nodiscard]] constexpr auto operator-(const VecT& x, ScalarLike auto y) noexcept
 {
     return detail::Map([y](VecT::ComponentType x_i) { return x_i - y; }, x);
 }
 
 template <VectorLike VecU>
-[[nodiscard]] constexpr auto operator-(ScalarLike auto x, const VecU &y) noexcept
+[[nodiscard]] constexpr auto operator-(ScalarLike auto x, const VecU& y) noexcept
 {
     return detail::Map([x](VecU::ComponentType y_i) { return x - y_i; }, y);
 }
 
 template <VectorLike VecT, VectorLike VecU>
-[[nodiscard]] constexpr auto operator-(const VecT &x, const VecU &y) noexcept requires VectorLikeSameSize<VecT, VecU>
+[[nodiscard]] constexpr auto operator-(const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
 {
-    return detail::Map([](VecT::ComponentType x_i, VecT::ComponentType y_i) { return x_i - y_i; }, x, y);
+    return detail::Map([](VecT::ComponentType x_i, VecU::ComponentType y_i) { return x_i - y_i; }, x, y);
 }
 
 // operator *
 
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator*(const VecT &x, ScalarLike auto y) noexcept
+[[nodiscard]] constexpr auto operator*(const VecT& x, ScalarLike auto y) noexcept
 {
     return detail::Map([y](VecT::ComponentType x_i) { return x_i * y; }, x);
 }
 
 template <VectorLike VecU>
-[[nodiscard]] constexpr auto operator*(ScalarLike auto x, const VecU &y) noexcept
+[[nodiscard]] constexpr auto operator*(ScalarLike auto x, const VecU& y) noexcept
 {
     return detail::Map([x](VecU::ComponentType y_i) { return x * y_i; }, y);
 }
 
 template <VectorLike VecT, VectorLike VecU>
-[[nodiscard]] constexpr auto operator*(const VecT &x, const VecU &y) noexcept requires VectorLikeSameSize<VecT, VecU>
+[[nodiscard]] constexpr auto operator*(const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
 {
-    return detail::Map([](VecT::ComponentType x_i, VecT::ComponentType y_i) { return x_i * y_i; }, x, y);
+    return detail::Map([](VecT::ComponentType x_i, VecU::ComponentType y_i) { return x_i * y_i; }, x, y);
 }
 
 // operator /
 
 template <VectorLike VecT>
-[[nodiscard]] constexpr auto operator/(const VecT &x, ScalarLike auto y) noexcept
+[[nodiscard]] constexpr auto operator/(const VecT& x, ScalarLike auto y) noexcept
 {
     return detail::Map([y](VecT::ComponentType x_i) { return x_i / y; }, x);
 }
 
 template <VectorLike VecU>
-[[nodiscard]] constexpr auto operator/(ScalarLike auto x, const VecU &y) noexcept
+[[nodiscard]] constexpr auto operator/(ScalarLike auto x, const VecU& y) noexcept
 {
     return detail::Map([x](VecU::ComponentType y_i) { return x / y_i; }, y);
 }
 
 template <VectorLike VecT, VectorLike VecU>
-[[nodiscard]] constexpr auto operator/(const VecT &x, const VecU &y) noexcept requires VectorLikeSameSize<VecT, VecU>
+[[nodiscard]] constexpr auto operator/(const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
 {
-    return detail::Map([](VecT::ComponentType x_i, VecT::ComponentType y_i) { return x_i / y_i; }, x, y);
+    return detail::Map([](VecT::ComponentType x_i, VecU::ComponentType y_i) { return x_i / y_i; }, x, y);
 }
+
+// relational 
+
+// operator ==
+
+template <VectorLike VecT, VectorLike VecU>
+[[nodiscard]] constexpr bool operator==(const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
+{
+    return detail::AndFold([](VecT::ComponentType x_i, VecU::ComponentType y_i) { return x_i == y_i; }, x, y);
+}
+
+
+template <VectorLike VecT, VectorLike VecU>
+[[nodiscard]] constexpr bool operator!=(const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
+{
+    return detail::AndFold([](VecT::ComponentType x_i, VecU::ComponentType y_i) { return x_i != y_i; }, x, y);
+}
+
 
 // geometric operations
 
+template <VectorLike VecT>
+constexpr VecT::ComponentType Length(VecT v) noexcept
+{
 
-} // LinearAlgebra
+}
+
+template<typename T, size_t N>
+constexpr auto RandomUnitVector(float magnitude) noexcept
+{
+    return Vec <T, N> {};
+}
+
+} // math
 

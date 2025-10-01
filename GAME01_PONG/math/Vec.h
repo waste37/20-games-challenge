@@ -5,6 +5,7 @@
 #include <array>
 #include <concepts>
 #include <type_traits>
+#include <random>
 
 #include "Concepts.h"
 
@@ -316,6 +317,31 @@ template <typename F, VectorLike VecT, VectorLike VecU>
     return AndFoldImpl(std::forward<F>(f), x, y, std::make_index_sequence<VecT::Size>{});
 }
 
+template <typename F, VectorLike VecT, std::size_t... Is >
+[[nodiscard]] constexpr bool PLusFoldImpl(F&& f, const VecT& x, std::index_sequence<Is...>)
+{
+    return (... + f(x[Is]));
+}
+
+template <typename F, VectorLike VecT, VectorLike VecU, size_t ...Is>
+[[nodiscard]] constexpr std::common_type_t<typename VecT::ComponentType, typename VecU::ComponentType>
+PlusFoldImpl(F&& f, const VecT& x, const VecU& y, std::index_sequence<Is...>) noexcept requires VectorLikeSameSize<VecT, VecU>
+{
+    return (... + f(x[Is], y[Is]));
+}
+
+template <typename F, VectorLike VecT>
+[[nodiscard]] constexpr bool PlusFold(F&& f, const VecT& x)
+{
+    return PlusFoldImpl(std::forward<F>(f), x, std::make_index_sequence<VecT::Size>{});
+}
+
+template <typename F, VectorLike VecT, VectorLike VecU>
+[[nodiscard]] constexpr auto PlusFold(F&& f, const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
+{
+    return PlusFoldImpl(std::forward<F>(f), x, y, std::make_index_sequence<VecT::Size>{});
+}
+
 }
 
 /* Unary Operations **************************************************/
@@ -438,16 +464,29 @@ template <VectorLike VecT, VectorLike VecU>
 
 // geometric operations
 
-template <VectorLike VecT>
-constexpr VecT::ComponentType Length(VecT v) noexcept
+template <VectorLike VecT, VectorLike VecU>
+constexpr auto Dot(const VecT& x, const VecU& y) noexcept requires VectorLikeSameSize<VecT, VecU>
 {
+    return detail::PlusFold([](VecT::ComponentType x_i, VecU::ComponentType y_i) { return x_i * y_i; }, x, y);
+}
 
+
+template <VectorLike VecT>
+constexpr auto Length(const VecT& v) noexcept
+{
+    return sqrt(Dot(v, v));
 }
 
 template<typename T, size_t N>
-constexpr auto RandomUnitVector(float magnitude) noexcept
+constexpr auto RandomUnitVector() noexcept
 {
-    return Vec <T, N> {};
+    static std::random_device rd{};
+    static std::mt19937 gen{ rd() };
+    static std::normal_distribution d{ 0.0f, 1.0f };
+
+    Vec<T, N> v{ 0.0f };
+    v = detail::Map([](auto x) { return d(gen); }, v);
+    return  v / Length(v);
 }
 
 } // math

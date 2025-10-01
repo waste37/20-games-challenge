@@ -1,13 +1,11 @@
 #include "Game.h"
 
-
 void Game::StartGame()
 {
-    if (Started) return;
-    Started = true;
+    if (State == GameState::Play) return;
 
     ResetPositions();
-    SetVelocity("ball", math::Vec2<float>(1.0f) * BallSpeed);
+    SetVelocity("ball", math::RandomUnitVector<float, 2>() * BallSpeed);
     State = GameState::Play;
 }
 
@@ -31,7 +29,6 @@ void Game::Load(fs::AssetLoader& loader)
     NameToId["player1"] = 1;
     NameToId["player2"] = 2;
     NameToId["field"] = 3;
-
     ResetPositions();
 }
 
@@ -44,9 +41,8 @@ void Game::Update()
     case GameState::Play:
         UpdatePlay();
         break;
-    case GameState::Player1Won:
-        break;
-    case GameState::Player2Won:
+    case GameState::PlayerWon:
+        UpdateWon();
         break;
     case GameState::Pause:
         UpdatePause();
@@ -61,13 +57,11 @@ void Game::Draw(gfx::Renderer<>& renderer)
     case GameState::Start:
         DrawStart(renderer);
         break;
-
     case GameState::Play:
         DrawPlay(renderer);
         break;
-    case GameState::Player1Won:
-        break;
-    case GameState::Player2Won:
+    case GameState::PlayerWon:
+        DrawWon(renderer);
         break;
     case GameState::Pause:
         DrawPause(renderer);
@@ -93,6 +87,12 @@ void Game::DrawPlay(gfx::Renderer<>& renderer)
     for (ptrdiff_t i = NameToId["field"]; i >= 0; --i) {
         renderer.DrawSprite(Sprites[i]);
     }
+}
+
+void Game::UpdateWon() {}
+void Game::DrawWon(gfx::Renderer<>& renderer)
+{
+    renderer.DrawSprite(Sprites[NameToId["field"]]);
 }
 
 void Game::UpdatePause() {}
@@ -155,7 +155,7 @@ void Game::SetVelocity(const char* name, math::Vec2<float> v)
 void Game::HandleInput(glfw::Window& window)
 {
     if (window.GetKey(GLFW_KEY_SPACE) == GLFW_PRESS) {
-        if (State == GameState::Pause) State = GameState::Play;
+        if (State == GameState::Pause || State == GameState::PlayerWon) State = GameState::Play;
         else if (State == GameState::Start) {
             StartGame();
         }
@@ -192,10 +192,11 @@ void Game::UpdatePositions()
             positions[i] = updated;
             Sprites[i].Bbox.Pos = updated;
         } else if (ball_id == i) {
-            if (bbox.Pos.x() <= FieldBbox.Pos.x() || bbox.Pos.x() + bbox.Size.x() >= FieldBbox.Pos.x() + FieldBbox.Size.x()) {
-                velocities[i].x() *= -1.0f;
-            } else {
+            if (bbox.Pos.y() <= FieldBbox.Pos.y() || bbox.Pos.y() + bbox.Size.y() >= FieldBbox.Pos.y() + FieldBbox.Size.y()) {
                 velocities[i].y() *= -1.0f;
+            } else {
+                positions[i] = updated;
+                Sprites[i].Bbox.Pos = updated;
             }
         }
     }
@@ -210,10 +211,14 @@ void Game::HandleCollisions()
 
     if (ball.Pos.x() <= FieldBbox.Pos.x()) {
         Player2Score++;
+        ResetPositions();
+        return;
     }
 
     if (ball.Pos.x() + ball.Size.x() >= FieldBbox.Pos.x() + FieldBbox.Size.x()) {
         Player1Score++;
+        ResetPositions();
+        return;
     }
 
     auto ball_temp = ball;

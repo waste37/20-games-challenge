@@ -8,8 +8,7 @@
 enum class GameState {
     Start,
     Play,
-    Player1Won,
-    Player2Won,
+    PlayerWon,
     Pause,
     Quit
 };
@@ -41,11 +40,15 @@ struct Game {
     void UpdatePlay();
     void DrawPlay(gfx::Renderer<>& renderer);
 
+    void UpdateWon();
+    void DrawWon(gfx::Renderer<>& renderer);
+
     void UpdatePause();
     void DrawPause(gfx::Renderer<>& renderer);
 
 
     void StartGame();
+    void RestartGame();
     void QuitGame();
     void ResetPositions();
     math::Bbox GetBbox(const char* name);

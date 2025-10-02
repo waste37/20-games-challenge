@@ -24,11 +24,13 @@ int main()
     while (!platform->Window.ShouldClose() && !game.ShouldQuit) {
         start = std::chrono::high_resolution_clock::now();
         auto frame_end = start + std::chrono::microseconds(16666);
+
         game.HandleInput(platform->Window);
         game.Update();
         platform->BeginDrawing();
         game.Draw(platform->Renderer);
         platform->EndDrawing();
+
         std::this_thread::sleep_until(frame_end - std::chrono::microseconds(1000));
         while (std::chrono::high_resolution_clock::now() < frame_end)
             /* make sure the scheduler doesn't get in my way */;

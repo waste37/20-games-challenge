@@ -14,24 +14,23 @@ int main()
     std::ios::sync_with_stdio(false);
     auto platform = std::make_shared<Platform>((int)game.WindowWidth, (int)game.WindowHeight, "PONG");
     game.Load(platform->Loader);
+    game.ChangeState<StartState>();
     platform->Renderer.SetColor(0);
+
     auto start = std::chrono::high_resolution_clock::now();
     auto end = std::chrono::high_resolution_clock::now();
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-    while (!platform->Window.ShouldClose() && game.State != GameState::Quit) {
+    while (!platform->Window.ShouldClose() && !game.ShouldQuit) {
         start = std::chrono::high_resolution_clock::now();
-
+        auto frame_end = start + std::chrono::microseconds(16666);
         game.HandleInput(platform->Window);
         game.Update();
         platform->BeginDrawing();
         game.Draw(platform->Renderer);
         platform->EndDrawing();
-        end = std::chrono::high_resolution_clock::now();
-
-        dt = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        if (dt < 16666) {
-            std::this_thread::sleep_for(std::chrono::microseconds(16666 - dt));
-        }
+        std::this_thread::sleep_until(frame_end - std::chrono::microseconds(1000));
+        while (std::chrono::high_resolution_clock::now() < frame_end)
+            /* make sure the scheduler doesn't get in my way */;
     }
 }

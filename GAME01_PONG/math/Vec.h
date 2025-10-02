@@ -65,8 +65,7 @@ public:
     void swap(VecStorage& other) noexcept(std::is_nothrow_swappable_v<T>)
     {
         for (std::size_t i = 0; i < Size; ++i) {
-            using std::swap;
-            swap((*this)[i], other[i]);
+            std::swap((*this)[i], other[i]);
         }
     }
 
@@ -88,8 +87,8 @@ public:
 } // detail
 
 #define LINEAR_ALGEBRA__DEFINE_VECTOR_ACCESSOR(AccessorName, index) \
-constexpr T &AccessorName() { return (*this)[index]; }              \
-constexpr const T &AccessorName() const { return (*this)[index]; }  \
+constexpr T &AccessorName() noexcept { return (*this)[index]; }              \
+constexpr const T &AccessorName() const noexcept { return (*this)[index]; }  \
 
 
 template <ScalarLike T, size_t N> class Vec : public detail::VecStorage<T, N> {

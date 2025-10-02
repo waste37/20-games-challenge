@@ -1,14 +1,5 @@
 #include "Game.h"
 
-void Game::StartGame()
-{
-    if (State == GameState::Play) return;
-
-    ResetPositions();
-    SetVelocity("ball", math::RandomUnitVector<float, 2>() * BallSpeed);
-    State = GameState::Play;
-}
-
 void Game::Load(fs::AssetLoader& loader)
 {
     auto field = loader.LoadSpriteFromImage("Assets/field.png");
@@ -32,75 +23,22 @@ void Game::Load(fs::AssetLoader& loader)
     ResetPositions();
 }
 
+void Game::Reset()
+{
+    Player1Score = 0;
+    Player2Score = 0;
+    ResetPositions();
+    SetVelocity("ball", math::RandomUnitVector<float, 2>() * Game::BallSpeed);
+}
+
 void Game::Update()
 {
-    switch (State) {
-    case GameState::Start:
-        UpdateStart();
-        break;
-    case GameState::Play:
-        UpdatePlay();
-        break;
-    case GameState::PlayerWon:
-        UpdateWon();
-        break;
-    case GameState::Pause:
-        UpdatePause();
-        break;
-    default: break;
-    }
+    CurrentState->Update(*this);
 }
 
 void Game::Draw(gfx::Renderer<>& renderer)
 {
-    switch (State) {
-    case GameState::Start:
-        DrawStart(renderer);
-        break;
-    case GameState::Play:
-        DrawPlay(renderer);
-        break;
-    case GameState::PlayerWon:
-        DrawWon(renderer);
-        break;
-    case GameState::Pause:
-        DrawPause(renderer);
-        break;
-    default: break;
-    }
-}
-
-void Game::UpdateStart() {}
-void Game::DrawStart(gfx::Renderer<>& renderer)
-{
-    renderer.DrawSprite(Sprites[NameToId["field"]]);
-}
-
-void Game::UpdatePlay()
-{
-    UpdatePositions();
-    HandleCollisions();
-}
-
-void Game::DrawPlay(gfx::Renderer<>& renderer)
-{
-    for (ptrdiff_t i = NameToId["field"]; i >= 0; --i) {
-        renderer.DrawSprite(Sprites[i]);
-    }
-}
-
-void Game::UpdateWon() {}
-void Game::DrawWon(gfx::Renderer<>& renderer)
-{
-    renderer.DrawSprite(Sprites[NameToId["field"]]);
-}
-
-void Game::UpdatePause() {}
-void Game::DrawPause(gfx::Renderer<>& renderer)
-{
-    for (ptrdiff_t i = NameToId["field"]; i >= 0; --i) {
-        renderer.DrawSprite(Sprites[i]);
-    }
+    CurrentState->Draw(*this, renderer);
 }
 
 void Game::ResetPositions()
@@ -139,6 +77,12 @@ math::Bbox Game::GetBbox(const char* name)
     return Sprites[id].Bbox;
 }
 
+const gfx::Sprite& Game::GetSprite(const char* name)
+{
+    int id = NameToId[name];
+    return Sprites[id];
+}
+
 
 math::Vec2<float> Game::GetVelocity(const char* name)
 {
@@ -154,29 +98,12 @@ void Game::SetVelocity(const char* name, math::Vec2<float> v)
 
 void Game::HandleInput(glfw::Window& window)
 {
-    if (window.GetKey(GLFW_KEY_SPACE) == GLFW_PRESS) {
-        if (State == GameState::Pause || State == GameState::PlayerWon) State = GameState::Play;
-        else if (State == GameState::Start) {
-            StartGame();
-        }
-    }
-
-    if (window.GetKey(GLFW_KEY_P) == GLFW_PRESS) {
-        if (State == GameState::Play) State = GameState::Pause;
-    }
-
     if (window.GetKey(GLFW_KEY_Q) == GLFW_PRESS) {
-        QuitGame();
+        ShouldQuit = true;
         return;
     }
 
-    SetVelocity("player1", math::Vec2<float>(0.0f));
-    if (window.GetKey(GLFW_KEY_S) == GLFW_PRESS) { SetVelocity("player1", { 0.0f, PaddleSpeed }); }
-    if (window.GetKey(GLFW_KEY_W) == GLFW_PRESS) { SetVelocity("player1", { 0.0f, -PaddleSpeed }); }
-
-    SetVelocity("player2", math::Vec2<float>(0.0f));
-    if (window.GetKey(GLFW_KEY_DOWN) == GLFW_PRESS) { SetVelocity("player2", { 0.0f, PaddleSpeed }); }
-    if (window.GetKey(GLFW_KEY_UP) == GLFW_PRESS) { SetVelocity("player2", { 0.0f, -PaddleSpeed }); }
+    CurrentState->HandleInput(*this, window);
 }
 
 void Game::UpdatePositions()
@@ -212,12 +139,14 @@ void Game::HandleCollisions()
     if (ball.Pos.x() <= FieldBbox.Pos.x()) {
         Player2Score++;
         ResetPositions();
+        SetVelocity("ball", math::RandomUnitVector<float, 2>() * BallSpeed);
         return;
     }
 
     if (ball.Pos.x() + ball.Size.x() >= FieldBbox.Pos.x() + FieldBbox.Size.x()) {
         Player1Score++;
         ResetPositions();
+        SetVelocity("ball", math::RandomUnitVector<float, 2>() * BallSpeed);
         return;
     }
 
@@ -237,10 +166,4 @@ void Game::HandleCollisions()
         direction = (direction / direction_length) * BallSpeed;
         SetVelocity("ball", direction);
     }
-}
-
-void Game::QuitGame()
-{
-    State = GameState::Quit;
-    return;
 }
